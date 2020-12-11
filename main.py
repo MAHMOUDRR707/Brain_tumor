@@ -1,41 +1,44 @@
-from __future__ import division, print_function
-# coding=utf-8
-import sys
 import os
-import glob
-import re
-import numpy as np
-import tensorflow as tf
-# Keras
-from keras.applications.imagenet_utils import preprocess_input, decode_predictions
-from keras.models import load_model
-from keras.preprocessing import image
+import sys
 
-# Flask utils
-from flask import Flask, redirect, url_for, request, render_template
+# Flask
+from flask import Flask, redirect, url_for, request, render_template, Response, jsonify, redirect
 from werkzeug.utils import secure_filename
 from gevent.pywsgi import WSGIServer
 
-# Define a flask app
+# TensorFlow and tf.keras
+import tensorflow as tf
+from tensorflow import keras
+
+from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
+
+# Some utilites
+import numpy as np
+from util import base64_to_pil
+
+# Declare a flask app
 app = Flask(__name__)
+
+# You can use pretrained model from Keras
+# Check https://keras.io/applications/
+# or https://www.tensorflow.org/api_docs/python/tf/keras/applications
+
+
+print('Model loaded. Check http://127.0.0.1:5000/')
 
 # Model saved with Keras model.save()
 MODEL_PATH = 'model_brain.h5'
-class_names = ["yes","no"]
-# Load your trained model
-model = load_model(MODEL_PATH)         # Necessary
-# print('Model loaded. Start serving...')
 
-# You can also use pretrained model from Keras
-# Check https://keras.io/applications/
-#from keras.applications.resnet50 import ResNet50
-#model = ResNet50(weights='imagenet')
-#model.save('')
-print('Model loaded. Check http://127.0.0.1:5000/')
+# Load your own trained model
+model = load_model(MODEL_PATH)
+# model._make_predict_function()          # Necessary
+print('Model loaded. Start serving...')
 
 
-def model_predict(img_path, model):
-    img = image.load_img(img_path, target_size=(64, 64))
+def model_predict(img, model):
+    img = img.resize((64, 64))
 
     # Preprocessing the image
     x = image.img_to_array(img)
@@ -44,11 +47,14 @@ def model_predict(img_path, model):
 
     # Be careful how your trained model deals with the input
     # otherwise, it won't make correct prediction!
-    x = preprocess_input(x, mode='caffe')
+    x = preprocess_input(x, mode='tf')
 
     preds = model.predict(x)
-    preds = np.argmax(preds,axis=1)
-    return preds
+    preds = np.argmax(preds, axis=1)
+    if preds == 0:
+        return "tumor "
+    else:
+        return "not tumor"
 
 
 @app.route('/', methods=['GET'])
@@ -58,30 +64,31 @@ def index():
 
 
 @app.route('/predict', methods=['GET', 'POST'])
-def upload():
+def predict():
     if request.method == 'POST':
-        # Get the file from post request
-        f = request.files['file']
+        # Get the image from post request
+        img = base64_to_pil(request.json)
 
-        # Save the file to ./uploads
-        basepath = os.path.dirname(__file__)
-        file_path = os.path.join(
-            basepath, secure_filename(f.filename))
-        f.save(file_path)
+        # Save the image to ./uploads
+        # img.save("./uploads/image.png")
 
         # Make prediction
-        preds = model_predict(file_path, model)
-        print(preds)
+        preds = model_predict(img, model)
+
         # Process your result for human
-                    # Simple argmax
-        pred_class = class_names[preds[0]]
-           # ImageNet Decode
-        result = str(pred_class)               # Convert to string
-        return result
+
+
+        # Serialize the result, you can add additional fields
+        return jsonify(result=preds, probability=preds)
+
     return None
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # app.run(port=5002, threaded=False)
+
+    # Serve the app with gevent
+    http_server = WSGIServer(('0.0.0.0', 5000), app)
+    http_server.serve_forever()
 
 
