@@ -28,3 +28,4 @@ def np_to_base64(img_np):
     return u"data:image/png;base64," + base64.b64encode(buffered.getvalue()).decode("ascii")
 
 
+
