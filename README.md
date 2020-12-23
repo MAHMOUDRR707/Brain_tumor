@@ -13,10 +13,10 @@ brain tumor notebook :  https://www.kaggle.com/mahmoudreda55/brain-tumor-85
 
 
 
-![alt text](https://ibb.co/wLvpRfD)
+![alt text](https://i.ibb.co/FWP8KFG/Whats-App-Image-2020-12-11-at-9-37-27-PM.jpg)
 
 
-![alt text](https://ibb.co/yP6WDZh)
+![alt text](https://i.ibb.co/Jtv5NGx/Whats-App-Image-2020-12-11-at-9-34-25-PM.jpg)
 
 
 
